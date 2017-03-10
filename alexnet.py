@@ -17,106 +17,103 @@ from keras.layers.pooling import GlobalAveragePooling2D
 from keras.optimizers import SGD, RMSprop, Adam
 from keras.preprocessing import image
 
+def alex_preprocess(x):
+    return x
+
 class Alexnet():
-
-	def __init__(self):
-		self.create()
-		self.get_classes()
-
-	def get_classes(self):
-		self.fFILE_PATH = 'http://www.platform.ai/models/'
-		fname = 'imagenet_class_index.json'
-		fpath = get_file(fname, self.fFILE_PATH+fname, cache_subdir='models')
-		with open(fpath) as f:
-			class_dict = json.load(f)
-		self.classes = [class_dict[str(i)][1] for i in range(len(class_dict))]
-
-	def predict(self, imgs, details=False):
-		all_preds = self.model.predict(imgs)
-		idxs = np.argmax(all_preds, axis=1)
-		preds = [all_preds[i, idxs[i]] for i in range(len(idxs))]
-		classes = [self.classes[idx] for idx in idxs]
-		return np.array(preds), idxs, classes
-
-	def ConvBlock(self, layers, filters):
-		model = self.model
-		for i in range(layers):
-			model.add(ZeroPadding2D((1,1)))
-			model.add(Convolution2D(filters, 3, 3, activation='relu'))
-		model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-	def FCBlock(self):
-		model = self.model
-		model.add(Dense(4096, activation='relu'))
-		model.add(Dropout(0.5))
+    """The VGG 16 Imagenet model"""
 
 
-	def create(self):
-		model = self.model = Sequential()
-		model.add(Lambda(vgg_preprocess, input_shape=(3,224,224))) # Change this
+    def __init__(self):
+        self.FILE_PATH = 'http://www.platform.ai/models/'
+        self.WEIGHTS_PATH = 'http://files.heuritech.com/weights/'
 
-		self.ConvBlock(1, 96)
-		self.ConvBlock(1, 256)
-		self.ConvBlock(2, 384)
-		self.ConvBlock(1, 256)
+        self.create()
+        self.get_classes()
 
 
-		model.add(Flatten())
-		self.FCBlock()
-		self.FCBlock()
+    def get_classes(self):
+        fname = 'imagenet_class_index.json'
+        fpath = get_file(fname, self.FILE_PATH+fname, cache_subdir='models')
+        with open(fpath) as f:
+            class_dict = json.load(f)
+        self.classes = [class_dict[str(i)][1] for i in range(len(class_dict))]
 
-		model.add(Dense(1000, activation='softmax'))
-
-		model.load_weights(get_file('alexnet_weights.h5', cache_subdir='models'))
-
-
-	def get_batches(self, path, gen=image.ImageDataGenerator(), shuffle=True, batch_size=8, class_mode='categorical'):
-		return gen.flow_from_directory(path, target_size=(224, 224),
-			class_mode=class_mode, shuffle=shuffle, batch_size=batch_size)
-
-	def ft(self, num):
-		model = self.model
-		model.pop()
-		for layer in model.layers: layer.trainable=False
-		model.add(Dense(num, activation='softmax'))
-		self.compile()
+    def predict(self, imgs, details=False):
+        all_preds = self.model.predict(imgs)
+        idxs = np.argmax(all_preds, axis=1)
+        preds = [all_preds[i, idxs[i]] for i in range(len(idxs))]
+        classes = [self.classes[idx] for idx in idxs]
+        return np.array(preds), idxs, classes
 
 
-	def finetune(self, batches):
-		model = self.model
-		model.pop()
-		for layer in model.layers: layer.trainable = False
-		model.add(Dense(batches.nb_class, activation='softmax'))
-		self.compile()
-
-	def compile(self, lr=0.001):
-		self.model.compile(optimizer=Adam(lr=lr),
-			loss='categorical_crossentropy', metrics=['accuracy'])
-
-	def fit(self, batches, val_batches, nb_epoch=1):
-		self.model.fit_generator(batches, samples_per_epoch=batches.nb_sample, nb_epoch=nb_epoch, validation_data=val_batches, nb_val_samples=val_batches.nb_sample)
+    def ConvBlock(self, layers, filters, nb_rowcol=3):
+        model = self.model
+        for i in range(layers):
+            model.add(ZeroPadding2D((1, 1)))
+            model.add(Convolution2D(filters, nb_rowcol, nb_rowcol, activation='relu'))
+        model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
 
-	def test(self, path, batch_size=8):
-		test_batches = self.get_batches(path, shuffle=False, batch_size=batch_size, class_mode=None)
-		return test_batches, self.model.predict_generator(test_batches, test_batches.nb_sample)
+    def FCBlock(self):
+        model = self.model
+        model.add(Dense(4096, activation='relu'))
+        model.add(Dropout(0.5))
 
 
+    def create(self):
+        model = self.model = Sequential()
+        model.add(Lambda(alex_preprocess, input_shape=(3,224,224)))
+        
+        self.ConvBlock(1, 96)
+        self.ConvBlock(1, 256)
+        self.ConvBlock(2, 384)
+        self.ConvBlock(1, 256)
+
+        model.add(Flatten())
+        self.FCBlock()
+        self.FCBlock()
+        model.add(Dense(1000, activation='softmax'))
+
+        fname = 'alexnet_weights.h5'
+        model.load_weights(get_file(fname, self.WEIGHTS_PATH+fname, cache_subdir='models'))
 
 
+    def get_batches(self, path, gen=image.ImageDataGenerator(), shuffle=True, batch_size=8, class_mode='categorical'):
+        return gen.flow_from_directory(path, target_size=(224,224),
+                class_mode=class_mode, shuffle=shuffle, batch_size=batch_size)
 
 
+    def ft(self, num):
+        model = self.model
+        model.pop()
+        for layer in model.layers: layer.trainable=False
+        model.add(Dense(num, activation='softmax'))
+        self.compile()
+
+    def finetune(self, batches):
+        model = self.model
+        model.pop()
+        for layer in model.layers: layer.trainable=False
+        model.add(Dense(batches.nb_class, activation='softmax'))
+        self.compile()
 
 
+    def compile(self, lr=0.001):
+        self.model.compile(optimizer=Adam(lr=lr),
+                loss='categorical_crossentropy', metrics=['accuracy'])
 
 
+    def fit_data(self, trn, labels,  val, val_labels,  nb_epoch=1, batch_size=64):
+        self.model.fit(trn, labels, nb_epoch=nb_epoch,
+                validation_data=(val, val_labels), batch_size=batch_size)
 
 
+    def fit(self, batches, val_batches, nb_epoch=1):
+        self.model.fit_generator(batches, samples_per_epoch=batches.nb_sample, nb_epoch=nb_epoch,
+                validation_data=val_batches, nb_val_samples=val_batches.nb_sample)
 
 
-
-
-
-
-
-
+    def test(self, path, batch_size=8):
+        test_batches = self.get_batches(path, shuffle=False, batch_size=batch_size, class_mode=None)
+        return test_batches, self.model.predict_generator(test_batches, test_batches.nb_sample)
