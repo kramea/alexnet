@@ -63,7 +63,7 @@ class Alexnet():
 
     def create(self):
         model = self.model = Sequential()
-        model.add(Lambda(alex_preprocess, input_shape=(3,224,224)))
+        model.add(Lambda(alex_preprocess, input_shape=(3,227,227)))
         
         self.ConvBlock(1, 96, 11)
         self.ConvBlock(1, 256, 5)
