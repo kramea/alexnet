@@ -65,10 +65,10 @@ class Alexnet():
         model = self.model = Sequential()
         model.add(Lambda(alex_preprocess, input_shape=(3,224,224)))
         
-        self.ConvBlock(1, 96)
-        self.ConvBlock(1, 256)
-        self.ConvBlock(2, 384)
-        self.ConvBlock(1, 256)
+        self.ConvBlock(1, 96, 11)
+        self.ConvBlock(1, 256, 5)
+        self.ConvBlock(2, 384, 3)
+        self.ConvBlock(1, 256, 3)
 
         model.add(Flatten())
         self.FCBlock()
