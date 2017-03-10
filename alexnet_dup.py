@@ -11,7 +11,7 @@ from keras import backend as K
 from keras.layers.normalization import BatchNormalization
 from keras.utils.data_utils import get_file
 from keras.models import Sequential
-from keras.layers.core import Flatten, Dense, Dropout, Lambda
+from keras.layers.core import Flatten, Dense, Dropout, Lambda, Input
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
 from keras.layers.pooling import GlobalAveragePooling2D
 from keras.optimizers import SGD, RMSprop, Adam
