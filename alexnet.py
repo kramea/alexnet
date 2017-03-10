@@ -52,7 +52,7 @@ class Alexnet():
         for i in range(layers):
             model.add(ZeroPadding2D((1, 1)))
             model.add(Convolution2D(filters, nb_rowcol, nb_rowcol, activation='relu'))
-        model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+        model.add(MaxPooling2D((3, 3), strides=(2, 2)))
 
 
     def FCBlock(self):
