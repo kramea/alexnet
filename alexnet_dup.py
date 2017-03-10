@@ -62,18 +62,42 @@ class Alexnet():
 
 
     def create(self):
-        model = self.model = Sequential()
-        model.add(Lambda(alex_preprocess, input_shape=(3,227,227)))
-        
-        self.ConvBlock(1, 96, 11)
-        self.ConvBlock(1, 128, 5)
-        self.ConvBlock(2, 384, 3)
-        self.ConvBlock(1, 128, 3)
 
-        model.add(Flatten())
-        self.FCBlock()
-        self.FCBlock()
-        model.add(Dense(1000, activation='softmax'))
+        inputs = Input(shape=(3,227,227))
+
+        conv_1 = Convolution2D(96, 11, 11,subsample=(4,4),activation='relu',
+                           name='conv_1')(inputs)
+
+        conv_2 = MaxPooling2D((3, 3), strides=(2,2))(conv_1)
+        #conv_2 = crosschannelnormalization(name="convpool_1")(conv_2)
+        conv_2 = ZeroPadding2D((2,2))(conv_2)
+
+
+        conv_3 = MaxPooling2D((3, 3), strides=(2, 2))(conv_2)
+        conv_3 = crosschannelnormalization()(conv_3)
+        conv_3 = ZeroPadding2D((1,1))(conv_3)
+        conv_3 = Convolution2D(384,3,3,activation='relu',name='conv_3')(conv_3)
+        conv_4 = ZeroPadding2D((1,1))(conv_3)
+        conv_4 = Convolution2D(384,3,3,activation='relu',name='conv_4')(conv_4)
+        
+        conv_5 = ZeroPadding2D((1,1))(conv_4)
+        conv_5 = Convolution2D(256,3,3,activation='relu',name='conv_4')(conv_5)
+        
+
+        dense_1 = MaxPooling2D((3, 3), strides=(2,2),name="convpool_5")(conv_5)
+
+
+        dense_1 = Flatten(name="flatten")(dense_1)
+        dense_1 = Dense(4096, activation='relu',name='dense_1')(dense_1)
+        dense_2 = Dropout(0.5)(dense_1)
+        dense_2 = Dense(4096, activation='relu',name='dense_2')(dense_2)
+        dense_3 = Dropout(0.5)(dense_2)
+        dense_3 = Dense(1000,name='dense_3')(dense_3)
+        prediction = Activation("softmax",name="softmax")(dense_3)
+
+
+        model = Model(input=inputs, output=prediction)
+
 
         fname = 'alexnet_weights.h5'
         model.load_weights(get_file(fname, self.WEIGHTS_PATH+fname, cache_subdir='models'))
